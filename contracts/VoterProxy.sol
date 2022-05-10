@@ -41,6 +41,8 @@ interface IProxy {
     ) external returns (bool, bytes memory);
 
     function increaseAmount(uint256) external;
+    function increaseAmountMax(bool) external;
+    function increaseAmountExact(uint256, bool) external;
 }
 
 library SafeProxy {
@@ -63,6 +65,8 @@ contract VoterProxy {
 
     event VoterApproved(address voter);
     event VoterRevoked(address voter);
+    event LockerApproved(address locker);
+    event LockerRevoked(address locker);
     event StrategyApproved(address strategy);
     event StrategyRevoked(address strategy);
     event NewGovernance(address governance);
@@ -76,9 +80,8 @@ contract VoterProxy {
     // gauge => strategies
     mapping(address => address) public strategies;
     mapping(address => bool) public voters;
+    mapping(address => bool) public lockers;
     address public governance;
-
-    uint256 lastTimeCursor;
 
     constructor() public {
         governance = msg.sender;
@@ -116,9 +119,30 @@ contract VoterProxy {
         emit VoterRevoked(_voter);
     }
 
+    function approveLocker(address _locker) external {
+        require(msg.sender == governance, "!governance");
+        lockers[_locker] = true;
+        emit LockerApproved(_locker);
+    }
+
+    function revokeLocker(address _locker) external {
+        require(msg.sender == governance, "!governance");
+        lockers[_locker] = false;
+        emit LockerRevoked(_locker);
+    }
+
     function lock() external {
-        uint256 amount = IERC20(bal).balanceOf(address(voter));
-        if (amount > 0) voter.increaseAmount(amount);
+        voter.increaseAmountMax(false); // Unprotected function shouldn't sell BAL
+    }
+
+    function convertAndLockMax() external {
+        require(lockers[msg.sender], "!approved");
+        voter.increaseAmountMax(true);
+    }
+
+    function convertAndLockExact(uint _amount) external {
+        require(lockers[msg.sender], "!approved");
+        if (_amount > 0) voter.increaseAmountExact(_amount, true);
     }
 
     function vote(address _gauge, uint256 _amount) public {
