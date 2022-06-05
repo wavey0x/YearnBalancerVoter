@@ -74,11 +74,10 @@ contract YearnBalancerVoter {
     address constant public bal = address(0xba100000625a3754423978a60c9317c58a424e3D);
     address constant public balLP = address(0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56);
     address constant public escrow = address(0xC128a9954e6c874eA3d62ce62B468bA073093F25);
+    IBalancerVault public constant bVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
     
     address public governance;
     address public proxy;
-    IBalancerVault public constant bVault = IBalancerVault(0x20dd72Ed959b6147912C2e529F0a0C651c33c9ce);
-    IBalancerPool public constant stakeLp = IBalancerPool(0xcdE5a11a4ACB4eE4c805352Cec57E236bdBC3837);
     address[] internal assets;
     
     constructor() public {
@@ -164,11 +163,11 @@ contract YearnBalancerVoter {
                 amounts[1] = _amount; // BAL
                 bytes memory userData = abi.encode(IBalancerVault.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, amounts, 0);
                 IBalancerVault.JoinPoolRequest memory request = IBalancerVault.JoinPoolRequest(assets, amounts, userData, false);
-                bVault.joinPool(stakeLp.getPoolId(), address(this), address(this), request);
+                bVault.joinPool(balLP.getPoolId(), address(this), address(this), request);
             } else {
                 bytes memory userData = abi.encode(IBalancerVault.ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _amount, 1);
                 IBalancerVault.ExitPoolRequest memory request = IBalancerVault.ExitPoolRequest(assets, amounts, userData, false);
-                bVault.exitPool(stakeLp.getPoolId(), address(this), payable(address(this)), request);
+                bVault.exitPool(balLP.getPoolId(), address(this), payable(address(this)), request);
             }
         }
     }
